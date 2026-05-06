@@ -11,6 +11,7 @@ import type FridayPlugin from '../main';
 import { VIEW_TYPE_FRIDAY_CHAT } from '../main';
 import { CommandPicker } from './features/input/CommandPicker';
 import { FolderPicker } from './features/input/FolderPicker';
+import { WikiProjectPicker } from './features/input/WikiProjectPicker';
 import type { SlashCommand } from './ChatCommands';
 
 export { VIEW_TYPE_FRIDAY_CHAT };
@@ -57,8 +58,9 @@ export class ChatView extends ItemView {
 	private toolBlocks = new Map<string, ToolBlock>();
 
 	// Pickers
-	private commandPicker: CommandPicker | null = null;
-	private folderPicker:  FolderPicker | null = null;
+	private commandPicker:      CommandPicker | null = null;
+	private folderPicker:       FolderPicker | null = null;
+	private wikiProjectPicker:  WikiProjectPicker | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: FridayPlugin) {
 		super(leaf);
@@ -82,11 +84,16 @@ export class ChatView extends ItemView {
 
 		this.buildMessagesArea(container);
 		this.buildInputArea(container);
+
+		// Restore last active wiki project (async, non-blocking for fast open)
+		this.restoreLastWikiProject().catch(() => {});
 	}
 
 	async onClose(): Promise<void> {
 		this.runtime?.cleanup();
 		this.destroyPickers();
+		this.wikiProjectPicker?.destroy();
+		this.wikiProjectPicker = null;
 	}
 
 	// ─────────────────────────────────────────
@@ -181,7 +188,20 @@ export class ChatView extends ItemView {
 		});
 
 		const toolbar = this.inputWrapperEl.createDiv({ cls: 'friday-chat-input-toolbar' });
-		toolbar.createSpan({ cls: 'friday-chat-input-hint', text: t('input_hint') });
+
+		// ── Left: wiki project picker ────────────────────────────────────────
+		const pickerContainer = toolbar.createDiv({ cls: 'friday-wiki-picker-container' });
+		this.wikiProjectPicker = new WikiProjectPicker(pickerContainer, this.plugin, {
+			onSelect: (project) => {
+				this.runtime?.setProjectByName(project.name);
+				this.plugin.settings.lastActiveWikiProject = project.name;
+				this.plugin.saveSettings().catch(() => {});
+			},
+		});
+		// Render without a pre-selected project; restoreLastWikiProject() will set it async
+		this.wikiProjectPicker.render(null).catch(() => {});
+
+		// ── Right: send button ───────────────────────────────────────────────
 		this.sendBtn = toolbar.createEl('button', { cls: 'friday-chat-send-btn', text: t('send') });
 
 		this.sendBtn.addEventListener('click', () => this.handleSend());
@@ -390,6 +410,15 @@ export class ChatView extends ItemView {
 
 			if (assistantText.trim()) {
 				this.conversationHistory.push({ role: 'assistant', content: assistantText.trim() });
+			}
+
+			// If the user just ran /wiki @folder, the runtime now has a new active project.
+			// Refresh the picker so it shows the new project and persists the choice.
+			const newProject = this.runtime?.getActiveProjectName?.();
+			if (newProject && text.startsWith('/wiki ')) {
+				this.plugin.settings.lastActiveWikiProject = newProject;
+				this.plugin.saveSettings().catch(() => {});
+				await this.wikiProjectPicker?.refresh(newProject);
 			}
 
 		} catch (error) {
@@ -686,6 +715,34 @@ export class ChatView extends ItemView {
 				: this.plugin.i18n.t('chat.send');
 		}
 		if (this.inputEl) this.inputEl.disabled = active;
+	}
+
+	// ─────────────────────────────────────────
+	// Wiki project picker helpers
+	// ─────────────────────────────────────────
+
+	/**
+	 * On view open, restore the last active wiki project from settings.
+	 * Sets the runtime + picker so users can immediately query without re-selecting.
+	 */
+	private async restoreLastWikiProject(): Promise<void> {
+		const lastProject = this.plugin.settings.lastActiveWikiProject;
+		if (!lastProject || !this.runtime) return;
+
+		// Ensure the project still exists before restoring
+		if (!this.plugin.foundryProjectService) return;
+		try {
+			const result = await this.plugin.foundryProjectService.getProjectInfo(
+				this.plugin.absWorkspacePath,
+				lastProject,
+			);
+			if (!result.success) return; // Project no longer exists
+
+			this.runtime.setProjectByName(lastProject);
+			await this.wikiProjectPicker?.refresh(lastProject);
+		} catch {
+			// Service not ready yet — skip silently
+		}
 	}
 
 	private startNewConversation(): void {

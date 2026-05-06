@@ -1756,6 +1756,132 @@ body.theme-light .friday-chat-message-content pre {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.friday-wiki-picker-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.friday-wiki-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 14px;
+  cursor: pointer;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: none;
+}
+.friday-wiki-picker-btn:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border-hover);
+  color: var(--text-normal);
+}
+.friday-wiki-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.friday-wiki-picker-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.friday-wiki-picker-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+.friday-wiki-picker-dropdown {
+  position: fixed;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 320px;
+  z-index: 9999;
+  animation: friday-fade-in 0.12s ease-out;
+}
+.friday-wiki-picker-section {
+  padding: 8px 0 4px;
+}
+.friday-wiki-picker-section + .friday-wiki-picker-section {
+  border-top: 1px solid var(--background-modifier-border);
+}
+.friday-wiki-picker-section-label {
+  padding: 0 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.friday-wiki-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-normal);
+  transition: background 0.1s ease;
+}
+.friday-wiki-picker-item:hover {
+  background: var(--background-modifier-hover);
+}
+.friday-wiki-picker-item--active {
+  cursor: default;
+  color: var(--text-accent);
+}
+.friday-wiki-picker-item--active:hover {
+  background: transparent;
+}
+.friday-wiki-picker-item-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.friday-wiki-picker-item--active .friday-wiki-picker-item-icon {
+  color: var(--text-accent);
+}
+.friday-wiki-picker-item-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.friday-wiki-picker-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.friday-wiki-picker-empty {
+  padding: 14px 16px;
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
+  line-height: 1.5;
+}
 .friday-command-picker {
   position: absolute;
   bottom: 100%;

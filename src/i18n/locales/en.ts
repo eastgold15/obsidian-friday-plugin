@@ -337,6 +337,12 @@ export const en: TranslationNamespace = {
 
 		// Runtime — unknown command
 		unknown_cmd: "❌ **Unknown command**: `{{cmd}}`\n\nAvailable commands:\n• `/wiki @folder` - Ingest folder into wiki\n• `/ask question` - Query wiki (or just type directly)\n• `/save [title]` - Save conversation\n• `/publish` - Publish wiki to MDFriday\n",
+
+		// Wiki project picker
+		picker_no_project: "Select wiki…",
+		picker_empty: "No wiki projects yet.\nUse /wiki @folder to ingest a folder first.",
+		picker_current: "Current Project",
+		picker_recent: "Recent",
 	},
 
 	ui: {

@@ -333,6 +333,12 @@ export const zhCn: TranslationNamespace = {
 
 		// 运行时 — 未知命令
 		unknown_cmd: "❌ **未知命令**：`{{cmd}}`\n\n可用命令：\n• `/wiki @文件夹` — 将文件夹构建为知识库\n• `/ask 问题` — 查询知识库（或直接输入）\n• `/save [标题]` — 保存对话\n• `/publish` — 发布知识库到 MDFriday\n",
+
+		// Wiki project picker
+		picker_no_project: "选择知识库…",
+		picker_empty: "暂无知识库项目。\n请先使用 /wiki @文件夹 摄入一个文件夹。",
+		picker_current: "当前知识库",
+		picker_recent: "最近使用",
 	},
 
 	ui: {

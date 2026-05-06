@@ -19,9 +19,30 @@ export class FridayWikiRuntime implements ChatRuntime {
 	
 	private wikiService: WikiService;
 	private currentFolderPath: string | null = null;
+	/** Active project name when set directly by the wiki picker (takes precedence over folderPath). */
+	private activeProjectName: string | null = null;
 	
 	constructor(private plugin: FridayPlugin) {
 		this.wikiService = new WikiService(plugin);
+	}
+
+	/**
+	 * Set the active wiki project directly (called by the WikiProjectPicker).
+	 * Derives the canonical folder path from the project name so that
+	 * handleWikiIngest/handleWikiQuery keep working via currentFolderPath.
+	 */
+	setProjectByName(projectName: string): void {
+		this.activeProjectName = projectName;
+		// Reverse the "folderPath + '-wiki'" convention used in getOrCreateProjectForFolder.
+		// E.g. "How-wiki" → "How", "my-notes-wiki" → "my-notes"
+		this.currentFolderPath = projectName.replace(/-wiki$/, '');
+	}
+
+	/** Returns the currently active project name (if any). */
+	getActiveProjectName(): string | null {
+		if (this.activeProjectName) return this.activeProjectName;
+		if (this.currentFolderPath) return `${this.currentFolderPath}-wiki`;
+		return null;
 	}
 	
 	private t(key: string, params?: Record<string, any>): string {
@@ -76,6 +97,7 @@ export class FridayWikiRuntime implements ChatRuntime {
 		}
 		
 		this.currentFolderPath = folderPath;
+		this.activeProjectName = null; // Will be derived from folderPath
 		
 		yield { type: 'text', content: this.t('ingest_starting', { folder: folderPath }) };
 		
@@ -299,33 +321,33 @@ export class FridayWikiRuntime implements ChatRuntime {
 			throw new Error(`${aiProviderType} requires an API key. Please configure it in Settings → AI Provider Settings.`);
 		}
 
-		// Build the LLM config (compatible with LLMServiceConfig + wiki adapter field names)
+		// Build the LLM config.
+		// The wiki-adapter reads embedding settings as flat fields on the llm config object
+		// (e.g. llmConfig.embeddingModel), NOT as a nested llm.embedding sub-object.
+		// This matches the format used in the integration tests.
 		const llmConfig: Record<string, any> = {
-			type: aiProviderType,
-			baseURL: aiProviderBaseUrl,
-			model: aiProviderModel,
+			type:         aiProviderType,
+			baseUrl:      aiProviderBaseUrl,  // wiki-adapter uses camelCase 'baseUrl'
+			baseURL:      aiProviderBaseUrl,  // keep uppercase alias for other consumers
+			model:        aiProviderModel,
 			defaultModel: aiProviderModel,
-			maxTokens: 32768,
+			maxTokens:    32768,
 		};
 		if (aiProviderApiKey) {
 			llmConfig.apiKey = aiProviderApiKey;
 		}
 
-		await this.plugin.foundryGlobalConfigService.set(this.plugin.absWorkspacePath, 'llm', llmConfig);
-
-		// Configure embedding — activated when a provider type is selected
+		// Embed embedding config as flat fields on the same llm config object.
+		// The wiki-adapter checks: llmConfig.embeddingModel (+ embeddingType, embeddingBaseUrl, embeddingApiKey)
 		const { aiEmbeddingType, aiEmbeddingBaseUrl, aiEmbeddingApiKey, aiEmbeddingModel } = this.plugin.settings;
-		if (aiEmbeddingType && aiEmbeddingType !== 'none') {
-			const embeddingConfig: Record<string, any> = {
-				type: aiEmbeddingType,
-				baseURL: aiEmbeddingBaseUrl,
-				model: aiEmbeddingModel,
-			};
-			if (aiEmbeddingApiKey) {
-				embeddingConfig.apiKey = aiEmbeddingApiKey;
-			}
-			await this.plugin.foundryGlobalConfigService.set(this.plugin.absWorkspacePath, 'llm.embedding', embeddingConfig);
+		if (aiEmbeddingType && aiEmbeddingType !== 'none' && aiEmbeddingModel) {
+			llmConfig.embeddingModel   = aiEmbeddingModel;
+			llmConfig.embeddingType    = aiEmbeddingType;
+			if (aiEmbeddingBaseUrl) llmConfig.embeddingBaseUrl = aiEmbeddingBaseUrl;
+			if (aiEmbeddingApiKey)  llmConfig.embeddingApiKey  = aiEmbeddingApiKey;
 		}
+
+		await this.plugin.foundryGlobalConfigService.set(this.plugin.absWorkspacePath, 'llm', llmConfig);
 
 		// Output language — use user setting, auto-detect from Obsidian language if not set
 		await this.plugin.foundryGlobalConfigService.set(
@@ -397,6 +419,7 @@ export class FridayWikiRuntime implements ChatRuntime {
 	
 	resetSession(): void {
 		this.currentFolderPath = null;
+		this.activeProjectName = null;
 	}
 	
 	getSessionId(): string | null {

@@ -95,6 +95,8 @@ interface FridaySettings {
 	aiEmbeddingBaseUrl: string;
 	aiEmbeddingApiKey: string;
 	aiEmbeddingModel: string;
+	// Chat: last active wiki project (for project picker auto-restore)
+	lastActiveWikiProject: string;
 }
 
 const DEFAULT_SETTINGS: FridaySettings = {
@@ -142,6 +144,8 @@ const DEFAULT_SETTINGS: FridaySettings = {
 	aiEmbeddingBaseUrl: '',
 	aiEmbeddingApiKey: '',
 	aiEmbeddingModel: '',
+	// Chat: last active wiki project
+	lastActiveWikiProject: '',
 }
 
 export const FRIDAY_ICON = 'dice-5';
@@ -2218,31 +2222,30 @@ export default class FridayPlugin extends Plugin {
 			// AI Provider Settings
 			// ========================================
 			if (this.settings.aiProviderType) {
+				// wiki-adapter reads embedding as flat fields on the llm config object.
+				// Do NOT write a separate 'llm.embedding' sub-object.
 				const llmConfig: Record<string, any> = {
-					type: this.settings.aiProviderType,
-					baseURL: this.settings.aiProviderBaseUrl,
-					model: this.settings.aiProviderModel,
+					type:         this.settings.aiProviderType,
+					baseUrl:      this.settings.aiProviderBaseUrl,  // camelCase used by wiki-adapter
+					baseURL:      this.settings.aiProviderBaseUrl,  // uppercase alias for other consumers
+					model:        this.settings.aiProviderModel,
 					defaultModel: this.settings.aiProviderModel,
-					maxTokens: 32768,
+					maxTokens:    32768,
 				};
 				if (this.settings.aiProviderApiKey) {
 					llmConfig.apiKey = this.settings.aiProviderApiKey;
 				}
-				await config.set(workspace, 'llm', llmConfig);
 
-				// Embedding config (optional) — activated by selecting a provider type
+				// Embedding: flat fields inside the same llm config object
 				const embType = this.settings.aiEmbeddingType;
-				if (embType && embType !== 'none') {
-					const embeddingConfig: Record<string, any> = {
-						type: embType,
-						baseURL: this.settings.aiEmbeddingBaseUrl,
-						model: this.settings.aiEmbeddingModel,
-					};
-					if (this.settings.aiEmbeddingApiKey) {
-						embeddingConfig.apiKey = this.settings.aiEmbeddingApiKey;
-					}
-					await config.set(workspace, 'llm.embedding', embeddingConfig);
+				if (embType && embType !== 'none' && this.settings.aiEmbeddingModel) {
+					llmConfig.embeddingModel = this.settings.aiEmbeddingModel;
+					llmConfig.embeddingType  = embType;
+					if (this.settings.aiEmbeddingBaseUrl) llmConfig.embeddingBaseUrl = this.settings.aiEmbeddingBaseUrl;
+					if (this.settings.aiEmbeddingApiKey)  llmConfig.embeddingApiKey  = this.settings.aiEmbeddingApiKey;
 				}
+
+				await config.set(workspace, 'llm', llmConfig);
 			}
 
 		} catch (error) {

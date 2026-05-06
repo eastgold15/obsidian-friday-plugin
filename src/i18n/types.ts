@@ -269,6 +269,12 @@ export interface TranslationNamespace {
 
 		// Runtime — unknown command
 		unknown_cmd: string;
+
+		// Wiki project picker
+		picker_no_project: string;
+		picker_empty: string;
+		picker_current: string;
+		picker_recent: string;
 	};
 
 	// Main UI translations
