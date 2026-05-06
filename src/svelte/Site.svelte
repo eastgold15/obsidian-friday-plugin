@@ -2082,9 +2082,11 @@
 				<img src="https://gohugo.net/mdfriday.svg" alt="MDFriday" class="mdfriday-logo" width="20" height="20" />
 				<span class="panel-title">MDFriday</span>
 			</div>
-			<button class="friday-ai-switch-btn" on:click={switchToChatView} title="Switch to AI Chat (Beta)">
-				🤖 AI
-			</button>
+			<div class="site-chat-icon-btn" on:click={switchToChatView} title="Switch to AI Chat" role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && switchToChatView()}>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+				</svg>
+			</div>
 		</div>
 
 		<!-- Current Content Display -->
@@ -3592,41 +3594,38 @@
 		border: 1px solid rgba(var(--color-red-rgb), 0.3);
 	}
 	
-	/* Friday AI Switch Button */
+	/* Panel header layout */
 	.panel-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}
-	
+
 	.panel-header-left {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 	}
-	
-	.friday-ai-switch-btn {
-		padding: 4px 10px;
-		background: var(--interactive-accent);
-		color: var(--text-on-accent);
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 12px;
-		font-weight: 500;
-		transition: all 0.2s;
+
+	/* AI Chat icon button — matches Friday Chat header icon style */
+	.site-chat-icon-btn {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		justify-content: center;
+		cursor: pointer;
+		color: var(--text-faint);
+		background: transparent;
+		border: none;
+		padding: 0;
+		transition: color 0.15s ease;
 	}
-	
-	.friday-ai-switch-btn:hover {
-		background: var(--interactive-accent-hover);
-		transform: translateY(-1px);
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+	.site-chat-icon-btn:hover {
+		color: var(--text-normal);
 	}
-	
-	.friday-ai-switch-btn:active {
-		transform: translateY(0);
+
+	.site-chat-icon-btn svg {
+		width: 16px;
+		height: 16px;
 	}
 </style> 
