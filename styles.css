@@ -2090,7 +2090,7 @@ body.theme-light .friday-chat-message-content pre {
 }
 .friday-token-usage {
   position: absolute;
-  bottom: 12px;
+  bottom: 2px;
   right: 14px;
   z-index: 5;
   font-family: var(--font-monospace);
