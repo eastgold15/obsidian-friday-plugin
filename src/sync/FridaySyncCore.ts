@@ -70,6 +70,7 @@ import {PouchDB} from "./core/pouchdb/pouchdb-browser";
 // Import encryption utilities for local database
 import {disableEncryption, enableEncryption} from "./core/pouchdb/encryption";
 import {replicationFilter} from "./core/pouchdb/compress";
+import {clearHandlers as clearSyncParamsHandlerCache} from "./core/replication/SyncParamsHandler";
 
 // Import path utilities for correct document ID generation
 import {id2path_base, path2id_base, isAccepted} from "./core/string_and_binary/path";
@@ -508,6 +509,14 @@ export class FridaySyncCore implements LiveSyncLocalDBEnv, LiveSyncCouchDBReplic
      */
     async initialize(config: SyncConfig): Promise<boolean> {
         try {
+            // Clear the module-level SyncParamsHandler cache so that a fresh handler is
+            // created with the current settings (especially the passphrase).
+            // Without this, after the first failed init (empty passphrase), subsequent calls
+            // with a correct passphrase would reuse the stale handler from the cache,
+            // causing connectRemoteCouchDBWithSetting to receive passphrase="" and block.
+            clearSyncParamsHandlerCache();
+            Logger("SyncParamsHandler cache cleared for fresh initialization", LOG_LEVEL_INFO);
+
             // Store ignore patterns directly in memory (no file needed)
             this._ignorePatterns = config.ignorePatterns || [];
             
