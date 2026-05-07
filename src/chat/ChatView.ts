@@ -7,6 +7,7 @@
 import type { WorkspaceLeaf, TFolder } from 'obsidian';
 import { ItemView, MarkdownRenderer, Notice, setIcon } from 'obsidian';
 import { FridayWikiRuntime } from './ChatRuntime';
+import type { TokenUsageUpdate } from './ChatRuntime';
 import type FridayPlugin from '../main';
 import { VIEW_TYPE_FRIDAY_CHAT } from '../main';
 import { CommandPicker } from './features/input/CommandPicker';
@@ -15,6 +16,16 @@ import { WikiProjectPicker } from './features/input/WikiProjectPicker';
 import type { SlashCommand } from './ChatCommands';
 
 export { VIEW_TYPE_FRIDAY_CHAT };
+
+// ─── Token count formatter ─────────────────────────────────────────────────
+/** Format a token count as a compact string: e.g. 2100 → "2.1k", 21000 → "21k", 500 → "500" */
+function formatTokenCount(count: number): string {
+	if (count <= 0) return '0';
+	if (count < 1000) return count.toString();
+	const k = count / 1000;
+	const s = k.toFixed(1);
+	return s.endsWith('.0') ? `${Math.round(k)}k` : `${s}k`;
+}
 
 // ─── Tool icons by name ───────────────────────────────────────────────────────
 const TOOL_ICONS: Record<string, string> = {
@@ -50,12 +61,21 @@ export class ChatView extends ItemView {
 	private inputWrapperEl:  HTMLElement | null = null;
 	private sendBtn:         HTMLButtonElement | null = null;
 	private scrollBtn:       HTMLElement | null = null;
+	private tokenUsageEl:    HTMLElement | null = null;
 
 	// State
 	private conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 	private isStreaming = false;
 	/** Tool blocks keyed by tool-call id */
 	private toolBlocks = new Map<string, ToolBlock>();
+
+	// Session token usage (accumulates across all queries in a conversation)
+	private accInputTokens   = 0;
+	private accOutputTokens  = 0;
+	private accCost          = 0;
+	private isLocalModel     = false;
+	/** Real-time estimate of the currently-streaming query's output tokens */
+	private currentEstOutput = 0;
 
 	// Pickers
 	private commandPicker:      CommandPicker | null = null;
@@ -166,6 +186,9 @@ export class ChatView extends ItemView {
 		this.scrollBtn.addEventListener('click', () => this.scrollToBottom());
 
 		this.messagesEl.addEventListener('scroll', () => this.updateScrollBtn());
+
+		// Token usage overlay at bottom-right of the messages area
+		this.tokenUsageEl = this.messagesWrapperEl.createDiv({ cls: 'friday-token-usage' });
 
 		this.appendWelcomeMessage();
 	}
@@ -330,6 +353,50 @@ export class ChatView extends ItemView {
 	}
 
 	// ─────────────────────────────────────────
+	// Token usage display
+	// ─────────────────────────────────────────
+
+	private updateTokenUsageDisplay(): void {
+		if (!this.tokenUsageEl) return;
+		const inputTokens  = this.accInputTokens;
+		const outputTokens = this.accOutputTokens + this.currentEstOutput;
+		if (inputTokens === 0 && outputTokens === 0) {
+			this.tokenUsageEl.style.visibility = 'hidden';
+			return;
+		}
+		this.tokenUsageEl.style.visibility = 'visible';
+		const inputStr  = formatTokenCount(inputTokens);
+		const outputStr = formatTokenCount(outputTokens);
+		const costStr   = this.isLocalModel ? 'local' : `$${this.accCost.toFixed(2)}`;
+		this.tokenUsageEl.textContent = `↑${inputStr} ↓${outputStr} · ${costStr}`;
+	}
+
+	private handleTokenUsageUpdate(update: TokenUsageUpdate): void {
+		if (update.isEstimate) {
+			// Real-time output token estimate (fired per streaming chunk)
+			this.currentEstOutput = update.outputTokens;
+			this.updateTokenUsageDisplay();
+		} else {
+			// Final precise values after stream completes — accumulate into session totals
+			this.accInputTokens  += update.inputTokens  ?? 0;
+			this.accOutputTokens += update.outputTokens;
+			this.currentEstOutput = 0;
+			if (update.isLocal !== undefined) this.isLocalModel = update.isLocal;
+			if (update.totalCost !== undefined) this.accCost += update.totalCost;
+			this.updateTokenUsageDisplay();
+		}
+	}
+
+	private resetSessionTokenUsage(): void {
+		this.accInputTokens   = 0;
+		this.accOutputTokens  = 0;
+		this.accCost          = 0;
+		this.currentEstOutput = 0;
+		this.isLocalModel     = false;
+		this.updateTokenUsageDisplay();
+	}
+
+	// ─────────────────────────────────────────
 	// Send & streaming
 	// ─────────────────────────────────────────
 
@@ -343,6 +410,10 @@ export class ChatView extends ItemView {
 		this.resizeInput();
 		this.setStreaming(true);
 		this.toolBlocks.clear();
+
+		// Register token usage callback for this query
+		this.currentEstOutput = 0;
+		this.runtime.setTokenUsageCallback((update) => this.handleTokenUsageUpdate(update));
 
 		this.appendUserMessage(text);
 		this.conversationHistory.push({ role: 'user', content: text });
@@ -429,6 +500,7 @@ export class ChatView extends ItemView {
 			console.error('[Friday Chat] Query error:', error);
 		}
 
+		this.runtime.setTokenUsageCallback(null);
 		this.setStreaming(false);
 		this.scrollToBottom();
 	}
@@ -749,6 +821,7 @@ export class ChatView extends ItemView {
 		if (this.isStreaming) return;
 		this.conversationHistory = [];
 		this.toolBlocks.clear();
+		this.resetSessionTokenUsage();
 		if (this.messagesEl) {
 			this.messagesEl.empty();
 			this.appendWelcomeMessage();

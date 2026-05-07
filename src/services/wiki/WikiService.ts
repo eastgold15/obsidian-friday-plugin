@@ -96,6 +96,30 @@ export class WikiService {
 	}
 	
 	/**
+	 * 计算 token 费用
+	 */
+	calculateCost(inputTokens: number, outputTokens: number): { totalCost: number; isLocal: boolean; currency: string } | null {
+		const { aiProviderType, aiProviderModel } = this.plugin.settings;
+		if (!aiProviderType || !aiProviderModel) return null;
+		try {
+			const result = (this.wikiService as any).calculateCost({
+				provider: aiProviderType,
+				model: aiProviderModel,
+				inputTokens,
+				outputTokens,
+			});
+			if (!result?.success || !result?.data) return null;
+			return {
+				totalCost: result.data.totalCost ?? 0,
+				isLocal: result.data.isLocal ?? false,
+				currency: result.data.currency ?? 'USD',
+			};
+		} catch {
+			return null;
+		}
+	}
+
+	/**
 	 * 生成文件名
 	 */
 	private generateFilename(title: string): string {

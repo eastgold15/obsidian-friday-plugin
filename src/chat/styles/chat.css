@@ -891,6 +891,30 @@ body.theme-light .friday-chat-message-content pre {
 }
 
 /* ──────────────────────────────────────────────
+   Token usage overlay (bottom-right of messages area)
+   Format: ↑2.1k ↓8.9k · $0.03   or   ↑21k ↓89k · local
+   ────────────────────────────────────────────── */
+.friday-token-usage {
+	position: absolute;
+	bottom: 2px;
+	right: 14px;
+	z-index: 5;
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	color: var(--text-faint);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
+	padding: 2px 8px;
+	user-select: none;
+	white-space: nowrap;
+	pointer-events: none;
+	visibility: hidden;
+	transition: color 0.15s ease;
+	line-height: 1.6;
+}
+
+/* ──────────────────────────────────────────────
    AI Provider not-configured banner
    ────────────────────────────────────────────── */
 

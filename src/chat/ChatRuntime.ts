@@ -14,6 +14,21 @@ import * as path from 'path';
 
 export { VIEW_TYPE_FRIDAY_CHAT };
 
+export interface TokenUsageUpdate {
+	/** true = real-time estimate during streaming; false = precise final value */
+	isEstimate: boolean;
+	/** Prompt / input tokens (only present when isEstimate: false) */
+	inputTokens?: number;
+	/** Completion / output tokens */
+	outputTokens: number;
+	/** Total cost for this query (only present when isEstimate: false) */
+	totalCost?: number;
+	/** Whether the model is a local (zero-cost) model */
+	isLocal?: boolean;
+	/** Currency code, e.g. 'USD' */
+	currency?: string;
+}
+
 export class FridayWikiRuntime implements ChatRuntime {
 	readonly providerId = 'friday-wiki';
 	
@@ -21,6 +36,8 @@ export class FridayWikiRuntime implements ChatRuntime {
 	private currentFolderPath: string | null = null;
 	/** Active project name when set directly by the wiki picker (takes precedence over folderPath). */
 	private activeProjectName: string | null = null;
+	/** Callback invoked with real-time and final token usage events during wiki queries. */
+	private tokenUsageCb: ((update: TokenUsageUpdate) => void) | null = null;
 	
 	constructor(private plugin: FridayPlugin) {
 		this.wikiService = new WikiService(plugin);
@@ -45,6 +62,14 @@ export class FridayWikiRuntime implements ChatRuntime {
 		return null;
 	}
 	
+	/**
+	 * Set (or clear) the callback that receives real-time and final token usage updates.
+	 * Call with null to unregister after streaming ends.
+	 */
+	setTokenUsageCallback(cb: ((update: TokenUsageUpdate) => void) | null): void {
+		this.tokenUsageCb = cb;
+	}
+
 	private t(key: string, params?: Record<string, any>): string {
 		return this.plugin.i18n.t(`chat.${key}`, params);
 	}
@@ -117,21 +142,57 @@ export class FridayWikiRuntime implements ChatRuntime {
 			
 			yield { type: 'tool_call_delta', id: toolId, delta: this.t('ingest_processing') };
 			
-			const keyProgress: string[] = [];
-			const result = await this.wikiService.ingest(projectName, (event) => {
-				if (event.type === 'ingest:file:complete') {
-					const progressText = event.progress
-						? ` [${event.progress.current}/${event.progress.total}]`
-						: '';
-					keyProgress.push(`✓ File processed${progressText}`);
-				} else if (event.type === 'ingest:pages:complete') {
-					keyProgress.push(`✓ Generated ${event.metadata?.pageCount || 0} wiki pages`);
+		const keyProgress: string[] = [];
+		const result = await this.wikiService.ingest(projectName, (event) => {
+			// Token usage tracking for ingest LLM calls (entity/concept extraction)
+			// Mirrors query:token:usage: isEstimate:true per chunk, isEstimate:false at end
+			if (event.type === 'ingest:llm:token:usage') {
+				const meta = event.metadata;
+				if (meta?.isEstimate === true) {
+					this.tokenUsageCb?.({
+						isEstimate:  true,
+						outputTokens: meta.tokenUsage?.completionTokens ?? 0,
+					});
+				} else if (meta?.isEstimate === false) {
+					const inputTokens  = meta.tokenUsage?.promptTokens    ?? 0;
+					const outputTokens = meta.tokenUsage?.completionTokens ?? 0;
+					const cost = this.wikiService.calculateCost(inputTokens, outputTokens);
+					this.tokenUsageCb?.({
+						isEstimate:  false,
+						inputTokens,
+						outputTokens,
+						totalCost:   cost?.totalCost,
+						isLocal:     cost?.isLocal,
+						currency:    cost?.currency,
+					});
 				}
+				return;
+			}
+			// Token usage tracking for ingest embedding calls
+			if (event.type === 'ingest:embedding:token:usage') {
+				const meta = event.metadata;
+				const inputTokens = meta?.embeddingTokenUsage?.promptTokens ?? 0;
+				this.tokenUsageCb?.({
+					isEstimate:  false,
+					inputTokens,
+					outputTokens: 0,
+				});
+				return;
+			}
+			// Progress display
+			if (event.type === 'ingest:file:complete') {
 				const progressText = event.progress
-					? ` [${event.progress.current}/${event.progress.total}] (${event.progress.percentage}%)`
+					? ` [${event.progress.current}/${event.progress.total}]`
 					: '';
-				console.log(`[${event.type}] ${event.message}${progressText}`);
-			});
+				keyProgress.push(`✓ File processed${progressText}`);
+			} else if (event.type === 'ingest:pages:complete') {
+				keyProgress.push(`✓ Generated ${event.metadata?.pageCount || 0} wiki pages`);
+			}
+			const progressText = event.progress
+				? ` [${event.progress.current}/${event.progress.total}] (${event.progress.percentage}%)`
+				: '';
+			console.log(`[${event.type}] ${event.message}${progressText}`);
+		});
 			
 			for (const line of keyProgress) {
 				yield { type: 'tool_call_delta', id: toolId, delta: line };
@@ -182,6 +243,40 @@ export class FridayWikiRuntime implements ChatRuntime {
 			// Stream LLM answer as `text` chunks so the View renders them as Markdown.
 			// We do NOT close the tool block yet — the spinner keeps running.
 			for await (const chunk of this.wikiService.queryStream(projectName, question, (event) => {
+				// Fire token usage callback for real-time and final updates
+				if (event.type === 'query:token:usage') {
+					const meta = event.metadata;
+					if (meta?.isEstimate === true) {
+						this.tokenUsageCb?.({
+							isEstimate: true,
+							outputTokens: meta.tokenUsage?.completionTokens ?? 0,
+						});
+					} else if (meta?.isEstimate === false) {
+						const inputTokens  = meta.tokenUsage?.promptTokens    ?? 0;
+						const outputTokens = meta.tokenUsage?.completionTokens ?? 0;
+						const cost = this.wikiService.calculateCost(inputTokens, outputTokens);
+						this.tokenUsageCb?.({
+							isEstimate:  false,
+							inputTokens,
+							outputTokens,
+							totalCost:   cost?.totalCost,
+							isLocal:     cost?.isLocal,
+							currency:    cost?.currency,
+						});
+					}
+					return;
+				}
+				// Embedding tokens used for query retrieval (input-only, fired before LLM)
+				if (event.type === 'query:embedding:token:usage') {
+					const meta = event.metadata;
+					const inputTokens = meta?.embeddingTokenUsage?.promptTokens ?? 0;
+					this.tokenUsageCb?.({
+						isEstimate:  false,
+						inputTokens,
+						outputTokens: 0,
+					});
+					return;
+				}
 				console.log(`[${event.type}] ${event.message}`);
 			})) {
 				yield { type: 'text', content: chunk };
