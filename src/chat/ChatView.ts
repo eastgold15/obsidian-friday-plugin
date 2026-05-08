@@ -340,7 +340,8 @@ export class ChatView extends ItemView {
 		if (!this.inputEl) return;
 		const text = this.inputEl.value;
 		const pos  = this.inputEl.selectionStart ?? 0;
-		const newBefore = text.substring(0, pos).replace(/@[\w/-]*$/, `@${folder.name} `);
+		// Use the full vault path (quoted to handle paths/names with spaces)
+		const newBefore = text.substring(0, pos).replace(/@[\w/\- ]*$/, `@"${folder.path}" `);
 		this.inputEl.value = newBefore + text.substring(pos);
 		this.inputEl.selectionStart = this.inputEl.selectionEnd = newBefore.length;
 		this.inputEl.focus();

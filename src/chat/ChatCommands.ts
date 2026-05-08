@@ -15,8 +15,8 @@ export const FRIDAY_CHAT_COMMANDS: SlashCommand[] = [
 		id: 'friday:wiki-ingest',
 		name: '/wiki',
 		description: '📚 Ingest folder into wiki',
-		syntax: '/wiki @folder-name',
-		example: '/wiki @MyNotes',
+		syntax: '/wiki @folder-path',
+		example: '/wiki @MyNotes  or  /wiki @"2.Areas/My Notes"',
 	},
 	{
 		id: 'friday:wiki-query',
@@ -49,9 +49,16 @@ export function getCommandByName(name: string): SlashCommand | undefined {
 }
 
 /**
- * Parse folder path from @mention
+ * Parse folder path from @mention.
+ * Supports two formats:
+ *   @"path/with spaces"  – quoted (used when path contains spaces)
+ *   @path/without-spaces – unquoted (backward compat)
  */
 export function parseFolderPath(text: string): string | null {
-	const match = text.match(/@([^\s]+)/);
-	return match ? match[1] : null;
+	// Try quoted form first: @"..."
+	const quotedMatch = text.match(/@"([^"]+)"/);
+	if (quotedMatch) return quotedMatch[1];
+	// Fall back to unquoted form: @non-whitespace
+	const unquotedMatch = text.match(/@([^\s"]+)/);
+	return unquotedMatch ? unquotedMatch[1] : null;
 }
