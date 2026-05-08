@@ -3,10 +3,11 @@ services:
     image: mdfriday/hugoverse:latest
     container_name: ${CONTAINER_NAME}
     restart: always
+    user: "1000:1000"
     networks:
       - 1panel-network
     ports:
-      - 1314:1314
+      - ${PANEL_APP_PORT_HTTP}:1314
     volumes:
       - ./data/hugoverse:/data
       - ./data/backups:/backups
@@ -56,7 +57,6 @@ services:
     networks:
       - 1panel-network
     ports:
-      - ${PANEL_APP_PORT_HTTP}:80
       - ${PANEL_APP_PORT_HTTPS}:443
     volumes:
       - ./data/caddy/data:/data

@@ -1,7 +1,6 @@
 additionalProperties:
   formFields:
-    - default: 80
-      edit: true
+    - default: 8080
       envKey: PANEL_APP_PORT_HTTP
       labelEn: HTTP Port
       labelZh: HTTP 端口
@@ -16,45 +15,9 @@ additionalProperties:
         zh: HTTP 端口
         zh-Hant: HTTP 埠
         tr: HTTP Bağlantı Noktası
-      required: true
+      required: false
       rule: paramPort
       type: number
-    - default: 443
-      edit: true
-      envKey: PANEL_APP_PORT_HTTPS
-      labelEn: HTTPS Port
-      labelZh: HTTPS 端口
-      label:
-        en: HTTPS Port
-        es-es: Puerto HTTPS
-        ja: HTTPS ポート
-        ms: Port HTTPS
-        pt-br: Porta HTTPS
-        ru: HTTPS Порт
-        ko: HTTPS 포트
-        zh: HTTPS 端口
-        zh-Hant: HTTPS 埠
-        tr: HTTPS Bağlantı Noktası
-      required: true
-      rule: paramPort
-      type: number
-    - default: localhost
-      envKey: DOMAIN
-      labelEn: Domain
-      labelZh: 域名
-      label:
-        en: Domain
-        es-es: Dominio
-        ja: ドメイン
-        ms: Domain
-        pt-br: Domínio
-        ru: Домен
-        ko: 도메인
-        zh: 域名
-        zh-Hant: 網域
-        tr: Alan Adı
-      required: true
-      type: text
     - default: 127.0.0.1
       envKey: SERVER_IP
       labelEn: Server IP
@@ -70,7 +33,7 @@ additionalProperties:
         zh: 服务器 IP
         zh-Hant: 伺服器 IP
         tr: Sunucu IP'si
-      required: true
+      required: false
       type: text
     - default: MDFriday
       envKey: SITE_NAME
@@ -87,7 +50,7 @@ additionalProperties:
         zh: 站点名称
         zh-Hant: 站點名稱
         tr: Site Adı
-      required: true
+      required: false
       type: text
     - default: admin@localhost
       envKey: ADMIN_EMAIL
@@ -159,54 +122,89 @@ additionalProperties:
       random: true
       required: true
       type: password
+    - default: localhost
+      envKey: DOMAIN
+      labelEn: Domain (Optional)
+      labelZh: 域名（可选）
+      label:
+        en: Domain (Optional)
+        es-es: Dominio (Opcional)
+        ja: ドメイン（任意）
+        ms: Domain (Pilihan)
+        pt-br: Domínio (Opcional)
+        ru: Домен (необязательно)
+        ko: 도메인 (선택)
+        zh: 域名（可选）
+        zh-Hant: 網域（可選）
+        tr: Alan Adı (İsteğe Bağlı)
+      required: false
+      type: text
+    - default: 8443
+      envKey: PANEL_APP_PORT_HTTPS
+      labelEn: HTTPS Port
+      labelZh: HTTPS 端口
+      label:
+        en: HTTPS Port
+        es-es: Puerto HTTPS
+        ja: HTTPS ポート
+        ms: Port HTTPS
+        pt-br: Porta HTTPS
+        ru: HTTPS Порт
+        ko: HTTPS 포트
+        zh: HTTPS 端口
+        zh-Hant: HTTPS 埠
+        tr: HTTPS Bağlantı Noktası
+      required: false
+      rule: paramPort
+      type: number
     - default: "false"
       envKey: DNSPOD_ENABLED
-      labelEn: Enable DNSPod
-      labelZh: 启用 DNSPod
+      labelEn: Enable DNSPod (Optional)
+      labelZh: 启用 DNSPod（可选）
       label:
-        en: Enable DNSPod
-        es-es: Habilitar DNSPod
-        ja: DNSPod を有効化
-        ms: Dayakan DNSPod
-        pt-br: Habilitar DNSPod
-        ru: Включить DNSPod
-        ko: DNSPod 활성화
-        zh: 启用 DNSPod
-        zh-Hant: 啟用 DNSPod
-        tr: DNSPod'u Etkinleştir
+        en: Enable DNSPod (Optional)
+        es-es: Habilitar DNSPod (Opcional)
+        ja: DNSPod を有効化（任意）
+        ms: Dayakan DNSPod (Pilihan)
+        pt-br: Habilitar DNSPod (Opcional)
+        ru: Включить DNSPod (необязательно)
+        ko: DNSPod 활성화 (선택)
+        zh: 启用 DNSPod（可选）
+        zh-Hant: 啟用 DNSPod（可選）
+        tr: DNSPod'u Etkinleştir (İsteğe Bağlı)
       required: false
       type: text
     - default: ""
       envKey: DNSPOD_ID
-      labelEn: DNSPod Secret ID
-      labelZh: DNSPod Secret ID
+      labelEn: DNSPod Secret ID (Optional)
+      labelZh: DNSPod Secret ID（可选）
       label:
-        en: DNSPod Secret ID
-        es-es: ID de secreto DNSPod
-        ja: DNSPod シークレット ID
-        ms: ID Rahsia DNSPod
-        pt-br: ID Secreto DNSPod
-        ru: Секретный ID DNSPod
-        ko: DNSPod 비밀 ID
-        zh: DNSPod Secret ID
-        zh-Hant: DNSPod Secret ID
-        tr: DNSPod Gizli Kimliği
+        en: DNSPod Secret ID (Optional)
+        es-es: ID de secreto DNSPod (Opcional)
+        ja: DNSPod シークレット ID（任意）
+        ms: ID Rahsia DNSPod (Pilihan)
+        pt-br: ID Secreto DNSPod (Opcional)
+        ru: Секретный ID DNSPod (необязательно)
+        ko: DNSPod 비밀 ID (선택)
+        zh: DNSPod Secret ID（可选）
+        zh-Hant: DNSPod Secret ID（可選）
+        tr: DNSPod Gizli Kimliği (İsteğe Bağlı)
       required: false
       type: text
     - default: ""
       envKey: DNSPOD_SECRET
-      labelEn: DNSPod Secret Key
-      labelZh: DNSPod Secret Key
+      labelEn: DNSPod Secret Key (Optional)
+      labelZh: DNSPod Secret Key（可选）
       label:
-        en: DNSPod Secret Key
-        es-es: Clave secreta DNSPod
-        ja: DNSPod シークレットキー
-        ms: Kunci Rahsia DNSPod
-        pt-br: Chave Secreta DNSPod
-        ru: Секретный ключ DNSPod
-        ko: DNSPod 비밀 키
-        zh: DNSPod Secret Key
-        zh-Hant: DNSPod Secret Key
-        tr: DNSPod Gizli Anahtarı
+        en: DNSPod Secret Key (Optional)
+        es-es: Clave secreta DNSPod (Opcional)
+        ja: DNSPod シークレットキー（任意）
+        ms: Kunci Rahsia DNSPod (Pilihan)
+        pt-br: Chave Secreta DNSPod (Opcional)
+        ru: Секретный ключ DNSPod (необязательно)
+        ko: DNSPod 비밀 키 (선택)
+        zh: DNSPod Secret Key（可选）
+        zh-Hant: DNSPod Secret Key（可選）
+        tr: DNSPod Gizli Anahtarı (İsteğe Bağlı)
       required: false
       type: password
